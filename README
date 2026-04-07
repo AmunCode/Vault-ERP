@@ -67,10 +67,10 @@ This system is designed to support resale businesses dealing with:
 ```
 
 ### 2. Create virtual environment
-```
-    python -m venv .venv
-    .venv\Scripts\activate
-```
+      ```sh
+      python -m venv .venv
+      .venv\Scripts\activate
+      ```
 
 ### 3. Install dependencies
 ```
