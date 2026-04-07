@@ -1,8 +1,7 @@
-# Vault Inventory Management System (Vault IMS)
+# Vault Enterprise Resourse Program
 
 ## Overview
 Vault ERP is an internal inventory and operations system designed to manage:
-
 - Product catalog (brands, categories, items)
 - Inventory (bulk and individual units)
 - Sales tracking across marketplaces (eBay, Whatnot, etc.)
@@ -15,10 +14,7 @@ This system is designed to support resale businesses dealing with:
 - Accessories
 - Electronics (optional support)
 
----
-
 ## Features (Phase 1)
-
 - Product catalog with structured categories and brands
 - Inventory tracking:
   - Bulk inventory (InventoryLot)
@@ -29,16 +25,11 @@ This system is designed to support resale businesses dealing with:
 - Expense tracking with categories
 - Django admin interface for all data
 
----
-
 ## Tech Stack
-
 - Python 3.12+
 - Django
 - SQLite (development)
 - Bootstrap (planned for UI)
-
----
 
 ## Project Structure
 ```
@@ -54,45 +45,41 @@ This system is designed to support resale businesses dealing with:
     └── vaultERP/
 ```
 
-
----
-
 ## Setup Instructions
 
-### 1. Clone the repository
-
+## 1. Clone the repository
 ```
     git clone https://github.com/yourusername/vault-erp.git
     cd vault-erp
 ```
 
-### 2. Create virtual environment
+## 2. Create virtual environment
       ```sh
       python -m venv .venv
       .venv\Scripts\activate
       ```
 
-### 3. Install dependencies
+## 3. Install dependencies
 ```
     pip install django
 ```
 
-### 4. Run migrations
+## 4. Run migrations
 ```
     python manage.py makemigrations
     python manage.py migrate
 ```
-### 5. Create a superuser
+## 5. Create a superuser
 ```
     python manage.py createsuperuser
 ```
 
-### 6. Run the server
+## 6. Run the server
 ``` 
     python manage.py runserver
 ```
 
-### 7. Access admin panel
+## 7. Access admin panel
 ``` 
     127.0.0.1:8000/admin
 ```
