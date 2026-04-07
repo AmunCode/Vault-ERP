@@ -25,7 +25,7 @@ This system is designed to support resale businesses dealing with:
 - Expense tracking with categories
 - Django admin interface for all data
 
-## Tech Stack
+## Prerequisites
 - Python 3.12+
 - Django
 - SQLite (development)
@@ -47,39 +47,39 @@ This system is designed to support resale businesses dealing with:
 
 ## Setup Instructions
 
-## 1. Clone the repository
-```
-    git clone https://github.com/yourusername/vault-erp.git
-    cd vault-erp
-```
+1. Clone the repository:
+  ```sh
+  git clone https://github.com/yourusername/vault-erp.git
+  cd vault-erp
+  ```
 
-## 2. Create virtual environment
-      ```sh
-      python -m venv .venv
-      .venv\Scripts\activate
-      ```
+2. Create virtual environment:
+    ```sh
+    python -m venv .venv
+    .venv\Scripts\activate
+    ```
 
-## 3. Install dependencies
-```
-    pip install django
-```
+3. Install dependencies:
+  ```sh
+  pip install django
+  ```
 
-## 4. Run migrations
-```
-    python manage.py makemigrations
-    python manage.py migrate
-```
-## 5. Create a superuser
-```
-    python manage.py createsuperuser
-```
+4. Run migrations:
+  ```sh
+  python manage.py makemigrations
+  python manage.py migrate
+  ```
+5. Create a superuser:
+  ```sh
+  python manage.py createsuperuser
+  ```
 
-## 6. Run the server
-``` 
-    python manage.py runserver
-```
+6. Run the server:
+  ```sh
+  python manage.py runserver
+  ```
 
-## 7. Access admin panel
-``` 
-    127.0.0.1:8000/admin
-```
+7. Access admin panel:
+  ```sh 
+  127.0.0.1:8000/admin
+  ```
