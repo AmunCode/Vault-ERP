@@ -19,18 +19,19 @@
     <div class="card shadow-sm mb-3">
       <div class="card-header fw-semibold">Identify Product</div>
       <div class="card-body">
-        <!-- UPC lookup -->
-        <label class="form-label">Scan / Enter UPC</label>
+        <!-- HSN / barcode lookup -->
+        <label class="form-label">Scan HSN Item # <span class="text-muted fw-normal">or UPC</span></label>
         <div class="input-group mb-3">
           <input type="text" id="upc-input" class="form-control font-monospace"
-                 placeholder="Scan or type UPC..."
+                 placeholder="Scan or type HSN item number..."
                  hx-get="{% url 'inventory:upc_lookup' %}"
-                 hx-trigger="change, keyup[key=='Enter']"
+                 hx-trigger="keyup[key=='Enter']"
                  hx-target="#upc-result"
                  hx-include="#upc-input"
                  name="upc"
                  autofocus>
           <button class="btn btn-outline-secondary" type="button"
+                  id="upc-search-btn"
                   hx-get="{% url 'inventory:upc_lookup' %}"
                   hx-target="#upc-result"
                   hx-include="#upc-input">
@@ -60,6 +61,7 @@
       {{ form.cost_overridden }}
       <input type="hidden" name="product_id" id="product-id-field" value="{{ product.pk|default:'' }}">
       <input type="hidden" name="upc" id="upc-hidden" value="">
+      <input type="hidden" name="hsn_item_number" id="hsn-item-number-hidden" value="">
       <input type="hidden" name="product_name" id="product-name-hidden" value="">
       <input type="hidden" name="category_id" id="category-id-hidden" value="">
       <input type="hidden" name="brand_id" id="brand-id-hidden" value="">
@@ -72,6 +74,14 @@
             <div class="col-md-6">
               <label class="form-label">Condition</label>
               {{ form.condition_grade }}
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Size</label>
+              {{ form.size }}
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Color</label>
+              {{ form.color }}
             </div>
             <div class="col-md-6">
               <label class="form-label">Serial Number (optional)</label>
@@ -156,6 +166,7 @@
       btn.addEventListener('click', () => {
         productIdField.value = btn.dataset.productId || '';
         document.getElementById('upc-hidden').value = btn.dataset.upc || '';
+        document.getElementById('hsn-item-number-hidden').value = btn.dataset.hsnItemNumber || '';
         document.getElementById('product-name-hidden').value = btn.dataset.name || '';
         document.getElementById('category-id-hidden').value = btn.dataset.categoryId || '';
         document.getElementById('brand-id-hidden').value = btn.dataset.brandId || '';

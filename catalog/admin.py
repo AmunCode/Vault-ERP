@@ -10,7 +10,8 @@ class BrandAdmin(admin.ModelAdmin):
 
 @admin.register(Category)
 class CategoryAdmin(admin.ModelAdmin):
-    list_display = ('name', 'parent', 'is_active')
+    list_display = ('name', 'sku_prefix', 'parent', 'is_active')
+    list_editable = ('sku_prefix',)
     search_fields = ('name',)
     list_filter = ('is_active',)
 

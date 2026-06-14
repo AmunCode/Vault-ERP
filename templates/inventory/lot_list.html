@@ -40,6 +40,7 @@
           <th>Supplier</th>
           <th>Received</th>
           <th class="text-end">Qty</th>
+          <th class="text-end">Processed</th>
           <th class="text-end">Unit Cost</th>
           <th class="text-end">Total Cost</th>
           <th>Location</th>
@@ -67,6 +68,11 @@
           <td>{{ lot.supplier|default:"—" }}</td>
           <td>{{ lot.received_date|default:"—" }}</td>
           <td class="text-end">{{ lot.quantity_on_hand }}</td>
+          <td class="text-end">
+            <span class="{% if lot.units_processed == lot.quantity_on_hand %}text-success fw-semibold{% elif lot.units_processed > 0 %}text-warning{% else %}text-muted{% endif %}">
+              {{ lot.units_processed }} / {{ lot.quantity_on_hand }}
+            </span>
+          </td>
           <td class="text-end">${{ lot.unit_cost|floatformat:2 }}</td>
           <td class="text-end">${{ lot.total_cost|floatformat:2 }}</td>
           <td>{{ lot.warehouse_location|default:"—" }}</td>
@@ -78,7 +84,7 @@
         </tr>
         {% empty %}
         <tr>
-          <td colspan="10" class="text-center text-muted py-4">No lots found. <a href="{% url 'inventory:lot_create' %}">Receive your first lot.</a></td>
+          <td colspan="11" class="text-center text-muted py-4">No lots found. <a href="{% url 'inventory:lot_create' %}">Receive your first lot.</a></td>
         </tr>
         {% endfor %}
       </tbody>

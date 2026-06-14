@@ -1,7 +1,11 @@
+import re
 import requests
 from django.contrib import messages
+from django.db.models import Count
 from django.shortcuts import render, get_object_or_404, redirect
 from catalog.models import Product, Category, Brand
+from core.models import SiteSettings
+from core.scrapers import scrape_hsn
 from .models import InventoryLot, InventoryUnit, WarehouseLocation
 from .forms import LotReceiveForm, UnitProcessForm
 
@@ -9,7 +13,7 @@ from .forms import LotReceiveForm, UnitProcessForm
 # ── Lots ──────────────────────────────────────────────────────────────────────
 
 def lot_list(request):
-    lots = InventoryLot.objects.select_related('product', 'warehouse_location')
+    lots = InventoryLot.objects.select_related('product', 'warehouse_location').annotate(units_processed=Count('units'))
     status_filter = request.GET.get('status')
     if status_filter:
         lots = lots.filter(status=status_filter)
@@ -75,12 +79,15 @@ def unit_create(request, lot_pk):
 
     if request.method == 'POST':
         upc = request.POST.get('upc', '').strip()
+        hsn_item_number = request.POST.get('hsn_item_number', '').strip()
         product_name = request.POST.get('product_name', '').strip()
         category_id = request.POST.get('category_id')
         brand_id = request.POST.get('brand_id')
         description = request.POST.get('description', '')
 
         # Resolve or create product
+        if not product and hsn_item_number:
+            product = Product.objects.filter(hsn_item_number=hsn_item_number).first()
         if not product and upc:
             product = Product.objects.filter(upc=upc).first()
         if not product and product_name:
@@ -89,13 +96,21 @@ def unit_create(request, lot_pk):
             product = Product.objects.create(
                 name=product_name,
                 upc=upc,
+                hsn_item_number=hsn_item_number,
                 category=category,
                 brand=brand,
                 description=description,
             )
-        elif product and description and not product.description:
-            product.description = description
-            product.save(update_fields=['description'])
+        elif product:
+            update_fields = []
+            if description and not product.description:
+                product.description = description
+                update_fields.append('description')
+            if hsn_item_number and not product.hsn_item_number:
+                product.hsn_item_number = hsn_item_number
+                update_fields.append('hsn_item_number')
+            if update_fields:
+                product.save(update_fields=update_fields)
 
         if not product:
             messages.error(request, "Please identify the product before saving.")
@@ -125,50 +140,74 @@ def unit_create(request, lot_pk):
     })
 
 
-# ── UPC Lookup (HTMX) ─────────────────────────────────────────────────────────
+# ── Item Lookup (HTMX) ────────────────────────────────────────────────────────
 
 def upc_lookup(request):
-    """HTMX endpoint: returns a partial with product info for the given UPC."""
-    upc = request.GET.get('upc', '').strip()
-    if not upc:
+    """
+    HTMX endpoint: looks up a scanned HSN item number or UPC.
+    Priority: 1) internal catalog  2) HSN scrape  3) UPCitemdb (feature-flagged off)
+    """
+    code = request.GET.get('upc', '').strip()
+    if not code:
         return render(request, 'inventory/partials/upc_result.html', {})
 
-    # Check our own catalog first
-    product = Product.objects.filter(upc=upc).first()
+    categories = Category.objects.filter(parent=None, is_active=True)
+    brands = Brand.objects.filter(is_active=True)
+
+    # 1. Internal catalog — check HSN item number and UPC
+    product = (
+        Product.objects.filter(hsn_item_number=code).first()
+        or Product.objects.filter(upc=code).first()
+    )
     if product:
         return render(request, 'inventory/partials/upc_result.html', {
             'product': product,
             'source': 'catalog',
         })
 
-    # Fall back to UPCitemdb free API
+    # 2. HSN scrape (primary external source)
+    hsn_data = None
+    if re.match(r'^\d{5,8}$', code):
+        hsn_data = scrape_hsn(code)
+
+    if hsn_data:
+        hsn_data['hsn_item_number'] = code
+        return render(request, 'inventory/partials/upc_result.html', {
+            'api_data': hsn_data,
+            'upc': code,
+            'source': 'hsn',
+            'categories': categories,
+            'brands': brands,
+        })
+
+    # 3. UPCitemdb fallback (optional, toggled from UI settings)
     api_data = {}
-    try:
-        resp = requests.get(
-            'https://api.upcitemdb.com/prod/trial/lookup',
-            params={'upc': upc},
-            timeout=5,
-        )
-        if resp.status_code == 200:
-            data = resp.json()
-            items = data.get('items', [])
-            if items:
-                item = items[0]
-                api_data = {
-                    'title': item.get('title', ''),
-                    'description': item.get('description', ''),
-                    'brand': item.get('brand', ''),
-                    'images': item.get('images', []),
-                    'upc': upc,
-                }
-    except Exception:
-        pass
+    if SiteSettings.get().enable_upc_api_lookup:
+        try:
+            resp = requests.get(
+                'https://api.upcitemdb.com/prod/trial/lookup',
+                params={'upc': code},
+                timeout=5,
+            )
+            if resp.status_code == 200:
+                items = resp.json().get('items', [])
+                if items:
+                    item = items[0]
+                    api_data = {
+                        'title': item.get('title', ''),
+                        'description': item.get('description', ''),
+                        'brand': item.get('brand', ''),
+                        'images': item.get('images', []),
+                    }
+        except Exception:
+            pass
 
     return render(request, 'inventory/partials/upc_result.html', {
-        'api_data': api_data,
-        'upc': upc,
-        'categories': Category.objects.filter(parent=None, is_active=True),
-        'brands': Brand.objects.filter(is_active=True),
+        'api_data': api_data if api_data else None,
+        'upc': code,
+        'source': 'upc_api' if api_data else None,
+        'categories': categories,
+        'brands': brands,
     })
 
 

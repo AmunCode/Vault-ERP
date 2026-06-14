@@ -68,6 +68,11 @@
 
       <li><div class="nav-section">System</div></li>
       <li class="nav-item">
+        <a class="nav-link {% block nav_settings %}{% endblock %}" href="{% url 'site_settings' %}">
+          <i class="bi bi-sliders me-2"></i>Settings
+        </a>
+      </li>
+      <li class="nav-item">
         <a class="nav-link" href="/admin/" target="_blank">
           <i class="bi bi-gear me-2"></i>Admin
         </a>

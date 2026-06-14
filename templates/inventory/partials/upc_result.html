@@ -34,7 +34,11 @@
   {% if api_data.description %}
     <div class="small text-muted mt-1">{{ api_data.description|truncatechars:120 }}</div>
   {% endif %}
-  <div class="font-monospace small text-muted mt-1">UPC: {{ api_data.upc }}</div>
+  {% if source == 'hsn' %}
+    <div class="font-monospace small text-muted mt-1">HSN #: {{ upc }}</div>
+  {% elif api_data.upc %}
+    <div class="font-monospace small text-muted mt-1">UPC: {{ api_data.upc }}</div>
+  {% endif %}
 </div>
 
 <!-- Category & Brand selects for new product creation -->
@@ -60,7 +64,8 @@
 <button type="button" class="btn btn-outline-success btn-sm w-100"
         data-select-product
         data-product-id=""
-        data-upc="{{ api_data.upc }}"
+        data-upc="{{ api_data.upc|default:'' }}"
+        data-hsn-item-number="{% if source == 'hsn' %}{{ upc }}{% endif %}"
         data-name="{{ api_data.title }}"
         data-description="{{ api_data.description }}"
         id="api-confirm-btn">

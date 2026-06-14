@@ -122,6 +122,8 @@ class InventoryUnit(models.Model):
     )
     sku = models.CharField(max_length=100, unique=True, blank=True)
     serial_number = models.CharField(max_length=100, blank=True)
+    size = models.CharField(max_length=50, blank=True)
+    color = models.CharField(max_length=50, blank=True)
     condition_grade = models.CharField(max_length=20, choices=CONDITION_CHOICES, default='used_good')
     warehouse_location = models.ForeignKey(
         WarehouseLocation,

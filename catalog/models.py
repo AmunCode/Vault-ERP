@@ -48,6 +48,7 @@ class Product(models.Model):
     )
     description = models.TextField(blank=True)
     upc = models.CharField(max_length=12, blank=True)
+    hsn_item_number = models.CharField(max_length=10, blank=True, db_index=True)
     mpn = models.CharField(max_length=255, blank=True)
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)

@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Settings — Vault ERP{% endblock %}
+{% block nav_settings %}active{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center gap-3 mb-4">
+  <h4 class="mb-0 fw-bold">Settings</h4>
+</div>
+
+<div class="row">
+  <div class="col-lg-6">
+    <form method="post">
+      {% csrf_token %}
+      <div class="card shadow-sm mb-3">
+        <div class="card-header fw-semibold">Product Lookup</div>
+        <div class="card-body">
+          <div class="form-check form-switch">
+            <input class="form-check-input" type="checkbox" role="switch"
+                   name="enable_upc_api_lookup" id="upc_flag"
+                   {% if config.enable_upc_api_lookup %}checked{% endif %}>
+            <label class="form-check-label" for="upc_flag">
+              Enable UPCitemdb API fallback
+            </label>
+          </div>
+          <div class="form-text">
+            When on, items that don't match in your catalog or on HSN will be looked up via the UPCitemdb API (100 requests/day free tier).
+            Leave off for HSN inventory — the API won't have these items.
+          </div>
+        </div>
+      </div>
+
+      <button type="submit" class="btn btn-primary">
+        <i class="bi bi-check-circle me-1"></i>Save Settings
+      </button>
+    </form>
+  </div>
+</div>
+{% endblock %}

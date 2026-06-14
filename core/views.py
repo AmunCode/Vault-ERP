@@ -1,7 +1,9 @@
-from django.shortcuts import render
+from django.contrib import messages
+from django.shortcuts import render, redirect
 from django.utils import timezone
 from inventory.models import InventoryLot, InventoryUnit
 from sales.models import Sale
+from .models import SiteSettings
 
 
 def dashboard(request):
@@ -24,3 +26,13 @@ def dashboard(request):
         'today': today,
     }
     return render(request, 'core/dashboard.html', context)
+
+
+def site_settings(request):
+    config = SiteSettings.get()
+    if request.method == 'POST':
+        config.enable_upc_api_lookup = 'enable_upc_api_lookup' in request.POST
+        config.save()
+        messages.success(request, "Settings saved.")
+        return redirect('site_settings')
+    return render(request, 'core/settings.html', {'config': config})

@@ -31,7 +31,7 @@ class UnitProcessForm(forms.ModelForm):
     class Meta:
         model = InventoryUnit
         fields = [
-            'condition_grade', 'unit_cost', 'cost_overridden',
+            'condition_grade', 'size', 'color', 'unit_cost', 'cost_overridden',
             'serial_number', 'warehouse_location', 'notes',
         ]
         widgets = {
