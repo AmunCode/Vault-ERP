@@ -2,7 +2,7 @@
 builder = "nixpacks"
 
 [deploy]
-startCommand = "python manage.py migrate && python manage.py collectstatic --noinput && gunicorn vaultERP.wsgi --log-file - --bind 0.0.0.0:$PORT"
+startCommand = "python manage.py migrate && python manage.py collectstatic --noinput && python -m gunicorn vaultERP.wsgi --log-file - --bind 0.0.0.0:$PORT"
 healthcheckPath = "/"
 healthcheckTimeout = 300
 restartPolicyType = "on_failure"
