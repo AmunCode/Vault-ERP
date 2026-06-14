@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+{% block title %}{{ lot.sku }} — Vault ERP{% endblock %}
+{% block nav_lots %}active{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center gap-3 mb-4">
+  <a href="{% url 'inventory:lot_list' %}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left"></i>
+  </a>
+  <div>
+    <h4 class="mb-0 fw-bold">{{ lot.sku }}</h4>
+    <span class="text-muted small">
+      {{ lot.get_lot_type_display }} ·
+      {% if lot.status == 'pending_processing' %}
+        <span class="text-warning">Pending Processing</span>
+      {% elif lot.status == 'active' %}
+        <span class="text-success">Active</span>
+      {% else %}
+        <span class="text-secondary">Closed</span>
+      {% endif %}
+    </span>
+  </div>
+  <div class="ms-auto d-flex gap-2">
+    <a href="{% url 'inventory:lot_edit' lot.pk %}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-pencil me-1"></i>Edit
+    </a>
+    <a href="{% url 'inventory:unit_create' lot.pk %}" class="btn btn-primary btn-sm">
+      <i class="bi bi-plus-circle me-1"></i>Add Item
+    </a>
+  </div>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-md-3">
+    <div class="card shadow-sm h-100">
+      <div class="card-body">
+        <div class="text-muted small">Supplier</div>
+        <div class="fw-semibold">{{ lot.supplier|default:"—" }}</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card shadow-sm h-100">
+      <div class="card-body">
+        <div class="text-muted small">Quantity</div>
+        <div class="fw-semibold">{{ lot.quantity_on_hand }} units</div>
+        <div class="text-muted small">{{ lot.quantity_available }} available</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card shadow-sm h-100">
+      <div class="card-body">
+        <div class="text-muted small">Total Cost</div>
+        <div class="fw-semibold">${{ lot.total_cost|floatformat:2 }}</div>
+        <div class="text-muted small">${{ lot.purchase_cost|floatformat:2 }} + ${{ lot.shipping_cost|floatformat:2 }} shipping</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card shadow-sm h-100">
+      <div class="card-body">
+        <div class="text-muted small">Est. Unit Cost</div>
+        <div class="fw-semibold">${{ lot.unit_cost|floatformat:2 }}</div>
+        <div class="text-muted small">{{ lot.warehouse_location|default:"No location" }}</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Items in this lot -->
+<div class="card shadow-sm">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <span class="fw-semibold">Items in this Lot ({{ units.count }})</span>
+    <a href="{% url 'inventory:unit_create' lot.pk %}" class="btn btn-primary btn-sm">
+      <i class="bi bi-plus-circle me-1"></i>Add Item
+    </a>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-hover mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>SKU</th>
+          <th>Product</th>
+          <th>Condition</th>
+          <th>Status</th>
+          <th class="text-end">Cost</th>
+          <th>Location</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for unit in units %}
+        <tr>
+          <td class="fw-semibold font-monospace">{{ unit.sku }}</td>
+          <td>{{ unit.product.name }}</td>
+          <td>{{ unit.get_condition_grade_display }}</td>
+          <td>
+            {% if unit.status == 'available' %}
+              <span class="badge bg-success">Available</span>
+            {% elif unit.status == 'sold' %}
+              <span class="badge bg-primary">Sold</span>
+            {% else %}
+              <span class="badge bg-secondary">{{ unit.get_status_display }}</span>
+            {% endif %}
+          </td>
+          <td class="text-end">
+            ${{ unit.unit_cost|floatformat:2 }}
+            {% if unit.cost_overridden %}<i class="bi bi-pencil-fill text-warning ms-1" title="Cost overridden"></i>{% endif %}
+          </td>
+          <td>{{ unit.warehouse_location|default:"—" }}</td>
+          <td>
+            <span class="text-muted small">{{ unit.created_at|date:"M d" }}</span>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="7" class="text-center text-muted py-4">
+            No items processed yet.
+            <a href="{% url 'inventory:unit_create' lot.pk %}">Add the first item.</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

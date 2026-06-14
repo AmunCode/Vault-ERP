@@ -3,6 +3,7 @@ from django.db import models
 # Create your models here.
 class Category(models.Model):
     name = models.CharField(max_length=100)
+    sku_prefix = models.CharField(max_length=3, blank=True, help_text="3-letter prefix for internal SKUs (top-level categories only, e.g. CLO, ELC)")
     parent = models.ForeignKey(
         'self',
         on_delete=models.CASCADE,
@@ -45,6 +46,7 @@ class Product(models.Model):
         blank=True,
         related_name='products'
     )
+    description = models.TextField(blank=True)
     upc = models.CharField(max_length=12, blank=True)
     mpn = models.CharField(max_length=255, blank=True)
     is_active = models.BooleanField(default=True)

@@ -1,0 +1,174 @@
+{% extends "base.html" %}
+{% block title %}Add Item to {{ lot.sku }} — Vault ERP{% endblock %}
+{% block nav_lots %}active{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center gap-3 mb-4">
+  <a href="{% url 'inventory:lot_detail' lot.pk %}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left"></i>
+  </a>
+  <div>
+    <h4 class="mb-0 fw-bold">Add Item</h4>
+    <span class="text-muted small">Lot {{ lot.sku }} · Est. unit cost ${{ lot.unit_cost|floatformat:2 }}</span>
+  </div>
+</div>
+
+<div class="row g-4">
+  <!-- Left: Product identification -->
+  <div class="col-lg-5">
+    <div class="card shadow-sm mb-3">
+      <div class="card-header fw-semibold">Identify Product</div>
+      <div class="card-body">
+        <!-- UPC lookup -->
+        <label class="form-label">Scan / Enter UPC</label>
+        <div class="input-group mb-3">
+          <input type="text" id="upc-input" class="form-control font-monospace"
+                 placeholder="Scan or type UPC..."
+                 hx-get="{% url 'inventory:upc_lookup' %}"
+                 hx-trigger="change, keyup[key=='Enter']"
+                 hx-target="#upc-result"
+                 hx-include="#upc-input"
+                 name="upc"
+                 autofocus>
+          <button class="btn btn-outline-secondary" type="button"
+                  hx-get="{% url 'inventory:upc_lookup' %}"
+                  hx-target="#upc-result"
+                  hx-include="#upc-input">
+            <i class="bi bi-search"></i>
+          </button>
+        </div>
+
+        <!-- HTMX result area -->
+        <div id="upc-result">
+          {% if product %}
+            {% include "inventory/partials/upc_result.html" with product=product source="catalog" %}
+          {% else %}
+            <div class="text-muted small text-center py-3">
+              <i class="bi bi-upc-scan d-block fs-2 mb-1"></i>
+              Scan a barcode or enter a UPC to look up product info
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right: Item details form -->
+  <div class="col-lg-7">
+    <form method="post" id="item-form">
+      {% csrf_token %}
+      {{ form.cost_overridden }}
+      <input type="hidden" name="product_id" id="product-id-field" value="{{ product.pk|default:'' }}">
+      <input type="hidden" name="upc" id="upc-hidden" value="">
+      <input type="hidden" name="product_name" id="product-name-hidden" value="">
+      <input type="hidden" name="category_id" id="category-id-hidden" value="">
+      <input type="hidden" name="brand_id" id="brand-id-hidden" value="">
+      <input type="hidden" name="description" id="description-hidden" value="">
+
+      <div class="card shadow-sm mb-3">
+        <div class="card-header fw-semibold">Item Details</div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label">Condition</label>
+              {{ form.condition_grade }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Serial Number (optional)</label>
+              {{ form.serial_number }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Warehouse Location</label>
+              {{ form.warehouse_location }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">
+                Unit Cost ($)
+                <button type="button" class="btn btn-link btn-sm p-0 ms-1" id="toggle-cost-override"
+                        title="Override cost for this item">
+                  <i class="bi bi-pencil-fill text-muted"></i>
+                </button>
+              </label>
+              {{ form.unit_cost }}
+              <div class="form-text" id="cost-note">Using lot average · click pencil to override</div>
+            </div>
+            <div class="col-12">
+              <label class="form-label">Notes</label>
+              {{ form.notes }}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary" id="save-btn" disabled>
+          <i class="bi bi-check-circle me-1"></i>Save &amp; Add Next
+        </button>
+        <a href="{% url 'inventory:lot_detail' lot.pk %}" class="btn btn-outline-secondary">Done</a>
+      </div>
+      <div class="form-text mt-2 text-warning" id="no-product-warning" style="display:none;">
+        Please identify the product above before saving.
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  const saveBtn = document.getElementById('save-btn');
+  const productIdField = document.getElementById('product-id-field');
+  const noProductWarning = document.getElementById('no-product-warning');
+
+  function checkSaveReady() {
+    const hasProduct = productIdField.value ||
+      document.getElementById('product-name-hidden').value;
+    saveBtn.disabled = !hasProduct;
+    noProductWarning.style.display = hasProduct ? 'none' : '';
+  }
+
+  // Cost override toggle
+  const costField = document.querySelector('[name=unit_cost]');
+  const costOverrideField = document.querySelector('[name=cost_overridden]');
+  const costNote = document.getElementById('cost-note');
+  let overrideActive = false;
+
+  document.getElementById('toggle-cost-override').addEventListener('click', () => {
+    overrideActive = !overrideActive;
+    costField.readOnly = !overrideActive;
+    costOverrideField.value = overrideActive ? 'on' : '';
+    costNote.textContent = overrideActive
+      ? 'Cost overridden for this item'
+      : 'Using lot average · click pencil to override';
+    costField.classList.toggle('border-warning', overrideActive);
+  });
+  costField.readOnly = true;
+
+  // HTMX: after UPC result loads, wire up "Use this product" button
+  document.body.addEventListener('htmx:afterSwap', (e) => {
+    if (e.detail.target.id === 'upc-result') {
+      bindProductSelect();
+    }
+  });
+
+  function bindProductSelect() {
+    document.querySelectorAll('[data-select-product]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        productIdField.value = btn.dataset.productId || '';
+        document.getElementById('upc-hidden').value = btn.dataset.upc || '';
+        document.getElementById('product-name-hidden').value = btn.dataset.name || '';
+        document.getElementById('category-id-hidden').value = btn.dataset.categoryId || '';
+        document.getElementById('brand-id-hidden').value = btn.dataset.brandId || '';
+        document.getElementById('description-hidden').value = btn.dataset.description || '';
+        btn.classList.replace('btn-outline-success', 'btn-success');
+        btn.innerHTML = '<i class="bi bi-check2 me-1"></i>Selected';
+        checkSaveReady();
+      });
+    });
+    checkSaveReady();
+  }
+
+  bindProductSelect();
+  checkSaveReady();
+</script>
+{% endblock %}

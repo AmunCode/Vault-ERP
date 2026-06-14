@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+{% block title %}{{ title }} — Vault ERP{% endblock %}
+{% block nav_lots %}active{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center gap-3 mb-4">
+  <a href="{% url 'inventory:lot_list' %}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left"></i>
+  </a>
+  <h4 class="mb-0 fw-bold">{{ title }}</h4>
+</div>
+
+<div class="row">
+  <div class="col-lg-8">
+    <form method="post">
+      {% csrf_token %}
+      <div class="card shadow-sm mb-3">
+        <div class="card-header fw-semibold">Lot Identity</div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-md-4">
+              <label class="form-label">Lot SKU *</label>
+              {{ form.sku }}
+              {% if form.sku.errors %}<div class="text-danger small">{{ form.sku.errors }}</div>{% endif %}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Type</label>
+              {{ form.lot_type }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Received Date</label>
+              {{ form.received_date }}
+            </div>
+            <div class="col-md-8">
+              <label class="form-label">Supplier / Source</label>
+              {{ form.supplier }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Warehouse Location</label>
+              {{ form.warehouse_location }}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card shadow-sm mb-3">
+        <div class="card-header fw-semibold">Quantity & Condition</div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-md-4">
+              <label class="form-label">Quantity Received *</label>
+              {{ form.quantity_on_hand }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Condition Grade</label>
+              {{ form.condition_grade }}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card shadow-sm mb-3">
+        <div class="card-header fw-semibold">Cost</div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-md-4">
+              <label class="form-label">Purchase Cost ($)</label>
+              {{ form.purchase_cost }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Shipping Cost ($)</label>
+              {{ form.shipping_cost }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Est. Unit Cost</label>
+              <div class="form-control bg-light" id="unit-cost-preview">—</div>
+              <div class="form-text">Calculated: (Purchase + Shipping) ÷ Qty</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card shadow-sm mb-4">
+        <div class="card-header fw-semibold">Notes</div>
+        <div class="card-body">{{ form.notes }}</div>
+      </div>
+
+      <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary">
+          <i class="bi bi-check-circle me-1"></i>Save Lot
+        </button>
+        <a href="{% url 'inventory:lot_list' %}" class="btn btn-outline-secondary">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  function updateUnitCost() {
+    const purchase = parseFloat(document.querySelector('[name=purchase_cost]').value) || 0;
+    const shipping = parseFloat(document.querySelector('[name=shipping_cost]').value) || 0;
+    const qty = parseInt(document.querySelector('[name=quantity_on_hand]').value) || 0;
+    const preview = document.getElementById('unit-cost-preview');
+    if (qty > 0) {
+      preview.textContent = '$' + ((purchase + shipping) / qty).toFixed(2);
+    } else {
+      preview.textContent = '—';
+    }
+  }
+  document.querySelectorAll('[name=purchase_cost],[name=shipping_cost],[name=quantity_on_hand]')
+    .forEach(el => el.addEventListener('input', updateUnitCost));
+</script>
+{% endblock %}
