@@ -147,9 +147,18 @@ def upc_lookup(request):
     HTMX endpoint: looks up a scanned HSN item number or UPC.
     Priority: 1) internal catalog  2) HSN scrape  3) UPCitemdb (feature-flagged off)
     """
-    code = request.GET.get('upc', '').strip()
-    if not code:
+    raw = request.GET.get('upc', '').strip()
+    if not raw:
         return render(request, 'inventory/partials/upc_result.html', {})
+
+    # HSN barcodes are 6-digit model codes; scanners may append extra chars.
+    # Take the first 6 characters and require all digits before doing anything.
+    code = raw[:6]
+    if not code.isdigit():
+        return render(request, 'inventory/partials/upc_result.html', {
+            'upc': raw,
+            'invalid_code': True,
+        })
 
     categories = Category.objects.filter(parent=None, is_active=True)
     brands = Brand.objects.filter(is_active=True)
@@ -166,9 +175,7 @@ def upc_lookup(request):
         })
 
     # 2. HSN scrape (primary external source)
-    hsn_data = None
-    if re.match(r'^\d{5,8}$', code):
-        hsn_data = scrape_hsn(code)
+    hsn_data = scrape_hsn(code)
 
     if hsn_data:
         hsn_data['hsn_item_number'] = code

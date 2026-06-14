@@ -154,6 +154,18 @@
   });
   costField.readOnly = true;
 
+  // Trim scan input to first 6 chars before HTMX fires
+  document.getElementById('upc-input').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      const input = e.target;
+      input.value = input.value.trim().slice(0, 6);
+    }
+  });
+  document.getElementById('upc-search-btn').addEventListener('click', () => {
+    const input = document.getElementById('upc-input');
+    input.value = input.value.trim().slice(0, 6);
+  });
+
   // HTMX: after UPC result loads, wire up "Use this product" button
   document.body.addEventListener('htmx:afterSwap', (e) => {
     if (e.detail.target.id === 'upc-result') {
