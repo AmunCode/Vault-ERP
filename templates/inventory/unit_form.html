@@ -15,7 +15,7 @@
 
 <div class="row g-4">
   <!-- Left: Product identification -->
-  <div class="col-lg-5">
+  <div class="col-12 col-lg-5">
     <div class="card shadow-sm mb-3">
       <div class="card-header fw-semibold">Identify Product</div>
       <div class="card-body">
@@ -55,7 +55,7 @@
   </div>
 
   <!-- Right: Item details form -->
-  <div class="col-lg-7">
+  <div class="col-12 col-lg-7">
     <form method="post" id="item-form">
       {% csrf_token %}
       {{ form.cost_overridden }}
