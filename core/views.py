@@ -1,9 +1,17 @@
 from django.contrib import messages
+from django.contrib.auth.decorators import login_not_required
+from django.http import HttpResponse
 from django.shortcuts import render, redirect
 from django.utils import timezone
 from inventory.models import InventoryLot, InventoryUnit
 from sales.models import Sale
+from .decorators import manager_required
 from .models import SiteSettings
+
+
+@login_not_required
+def healthcheck(request):
+    return HttpResponse("ok")
 
 
 def dashboard(request):
@@ -28,6 +36,7 @@ def dashboard(request):
     return render(request, 'core/dashboard.html', context)
 
 
+@manager_required
 def site_settings(request):
     config = SiteSettings.get()
     if request.method == 'POST':

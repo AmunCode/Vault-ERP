@@ -19,7 +19,10 @@
 
     /* Desktop: static sidebar in flex row */
     @media (min-width: 768px) {
-      #sidebar { display: flex !important; flex-direction: column; position: sticky; top: 0; height: 100vh; overflow-y: auto; }
+      #sidebar {
+        display: flex !important; flex-direction: column; position: sticky; top: 0; height: 100vh; overflow-y: auto;
+        visibility: visible !important; transform: none !important;
+      }
       .mobile-topbar { display: none !important; }
       .main-content { min-height: 100vh; }
     }
@@ -66,36 +69,31 @@
 
     <ul class="nav flex-column gap-1">
       <li class="nav-item">
-        <a class="nav-link {% block nav_dashboard %}{% endblock %}" href="{% url 'dashboard' %}"
-           data-bs-dismiss="offcanvas">
+        <a class="nav-link {% block nav_dashboard %}{% endblock %}" href="{% url 'dashboard' %}">
           <i class="bi bi-speedometer2 me-2"></i>Dashboard
         </a>
       </li>
 
       <li><div class="nav-section">Inventory</div></li>
       <li class="nav-item">
-        <a class="nav-link {% block nav_lots %}{% endblock %}" href="{% url 'inventory:lot_list' %}"
-           data-bs-dismiss="offcanvas">
+        <a class="nav-link {% block nav_lots %}{% endblock %}" href="{% url 'inventory:lot_list' %}">
           <i class="bi bi-inbox-fill me-2"></i>Lots
         </a>
       </li>
       <li class="nav-item">
-        <a class="nav-link {% block nav_units %}{% endblock %}" href="{% url 'inventory:unit_list' %}"
-           data-bs-dismiss="offcanvas">
+        <a class="nav-link {% block nav_units %}{% endblock %}" href="{% url 'inventory:unit_list' %}">
           <i class="bi bi-tag me-2"></i>Units
         </a>
       </li>
       <li class="nav-item">
-        <a class="nav-link {% block nav_locations %}{% endblock %}" href="{% url 'inventory:location_list' %}"
-           data-bs-dismiss="offcanvas">
+        <a class="nav-link {% block nav_locations %}{% endblock %}" href="{% url 'inventory:location_list' %}">
           <i class="bi bi-geo-alt me-2"></i>Locations
         </a>
       </li>
 
       <li><div class="nav-section">Catalog</div></li>
       <li class="nav-item">
-        <a class="nav-link {% block nav_products %}{% endblock %}" href="{% url 'catalog:product_list' %}"
-           data-bs-dismiss="offcanvas">
+        <a class="nav-link {% block nav_products %}{% endblock %}" href="{% url 'catalog:product_list' %}">
           <i class="bi bi-grid me-2"></i>Products
         </a>
       </li>
@@ -107,19 +105,38 @@
         </a>
       </li>
 
-      <li><div class="nav-section">System</div></li>
-      <li class="nav-item">
-        <a class="nav-link {% block nav_settings %}{% endblock %}" href="{% url 'site_settings' %}"
-           data-bs-dismiss="offcanvas">
-          <i class="bi bi-sliders me-2"></i>Settings
-        </a>
-      </li>
-      <li class="nav-item">
-        <a class="nav-link" href="/admin/" target="_blank">
-          <i class="bi bi-gear me-2"></i>Admin
-        </a>
-      </li>
+      {% if is_manager or request.user.is_staff %}
+        <li><div class="nav-section">System</div></li>
+      {% endif %}
+      {% if is_manager %}
+        <li class="nav-item">
+          <a class="nav-link {% block nav_settings %}{% endblock %}" href="{% url 'site_settings' %}">
+            <i class="bi bi-sliders me-2"></i>Settings
+          </a>
+        </li>
+      {% endif %}
+      {% if request.user.is_staff %}
+        <li class="nav-item">
+          <a class="nav-link" href="/admin/" target="_blank">
+            <i class="bi bi-gear me-2"></i>Admin
+          </a>
+        </li>
+      {% endif %}
     </ul>
+
+    <div class="mt-auto px-2 pb-2 pt-3 border-top" style="border-color: rgba(255,255,255,.1) !important;">
+      <div class="d-flex align-items-center justify-content-between px-1">
+        <span class="text-light small text-truncate">
+          <i class="bi bi-person-circle me-1"></i>{{ request.user.username }}
+        </span>
+        <form method="post" action="{% url 'logout' %}" class="mb-0">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-sm btn-outline-light border-0" title="Log out">
+            <i class="bi bi-box-arrow-right"></i>
+          </button>
+        </form>
+      </div>
+    </div>
   </div>
 
   <!-- Main content -->
