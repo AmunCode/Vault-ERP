@@ -120,7 +120,10 @@ class InventoryUnit(models.Model):
         blank=True,
         related_name='units'
     )
-    sku = models.CharField(max_length=100, unique=True, blank=True)
+    # Not unique -- it's a style/variant code (item#-size-color-brand), shared
+    # across rows that differ only by condition/location/cost-override. The
+    # row's own id disambiguates those, not the SKU.
+    sku = models.CharField(max_length=100, blank=True)
     serial_number = models.CharField(max_length=100, blank=True)
     size = models.CharField(max_length=50, blank=True)
     color = models.CharField(max_length=50, blank=True)
@@ -135,6 +138,9 @@ class InventoryUnit(models.Model):
     # Defaults to lot's derived unit_cost; can be overridden for high-value items
     unit_cost = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0'))
     cost_overridden = models.BooleanField(default=False)
+    # Pooled count for non-serialized items sharing product+size+color+condition+location.
+    # Serialized items (serial_number set) always stay at qty=1.
+    qty = models.PositiveIntegerField(default=1)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='available')
     notes = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -151,12 +157,27 @@ class InventoryUnit(models.Model):
             cat = cat.parent
         return 'GEN'
 
+    def _generate_sku(self):
+        """
+        item#-size-color-brand, e.g. 926546-M-Pink-DG2. Falls back to the
+        old category-prefix + sequential-id scheme for the first segment
+        only, when the product has neither an HSN item number nor a UPC.
+        """
+        item_number = ''
+        brand_name = ''
+        if self.product:
+            item_number = self.product.hsn_item_number or self.product.upc or ''
+            if self.product.brand:
+                brand_name = self.product.brand.name
+        if not item_number:
+            item_number = f"{self._get_sku_prefix()}-{self.id:06d}"
+        parts = [p for p in (item_number, self.size, self.color, brand_name) if p]
+        return '-'.join(parts)
+
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
         if not self.sku:
-            prefix = self._get_sku_prefix()
-            lot_suffix = f"L{self.source_lot_id:04d}" if self.source_lot_id else "L0000"
-            self.sku = f"{prefix}-{self.id:06d}-{lot_suffix}"
+            self.sku = self._generate_sku()
             super().save(update_fields=['sku'])
 
     def __str__(self):

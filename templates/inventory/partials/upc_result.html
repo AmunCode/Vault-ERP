@@ -15,8 +15,23 @@
   {% if product.category %}<div class="text-muted small">{{ product.category }}</div>{% endif %}
   {% if product.upc %}<div class="font-monospace small text-muted">UPC: {{ product.upc }}</div>{% endif %}
 </div>
+
+{% if not product.brand %}
+<div class="mb-2">
+  <label class="form-label form-label-sm">Brand <span class="text-danger">*</span></label>
+  <select class="form-select form-select-sm" id="catalog-brand-select">
+    <option value="">— select —</option>
+    {% for b in brands %}
+      <option value="{{ b.pk }}">{{ b.name }}</option>
+    {% endfor %}
+  </select>
+  <div class="form-text">Required — used in the item's SKU.</div>
+</div>
+{% endif %}
+
 <button type="button" class="btn btn-outline-success btn-sm w-100"
         data-select-product
+        id="catalog-confirm-btn"
         data-product-id="{{ product.pk }}"
         data-upc="{{ product.upc }}"
         data-name="{{ product.name }}"
@@ -25,6 +40,14 @@
         data-description="{{ product.description }}">
   <i class="bi bi-check2 me-1"></i>Use This Product
 </button>
+<script>
+  document.getElementById('catalog-confirm-btn').addEventListener('click', function() {
+    const brandSelect = document.getElementById('catalog-brand-select');
+    if (brandSelect) {
+      this.dataset.brandId = brandSelect.value;
+    }
+  });
+</script>
 
 {% elif api_data %}
 {# Found via UPC API #}
@@ -58,9 +81,9 @@
   </select>
 </div>
 <div class="mb-2">
-  <label class="form-label form-label-sm">Brand</label>
+  <label class="form-label form-label-sm">Brand <span class="text-danger">*</span></label>
   <select class="form-select form-select-sm" id="api-brand-select">
-    <option value="">— select or leave blank —</option>
+    <option value="">— select —</option>
     {% for b in brands %}
       <option value="{{ b.pk }}" {% if b.name == api_data.brand %}selected{% endif %}>{{ b.name }}</option>
     {% endfor %}
@@ -104,9 +127,9 @@
   </select>
 </div>
 <div class="mb-2">
-  <label class="form-label form-label-sm">Brand</label>
+  <label class="form-label form-label-sm">Brand <span class="text-danger">*</span></label>
   <select class="form-select form-select-sm" id="manual-brand-select">
-    <option value="">— select or leave blank —</option>
+    <option value="">— select —</option>
     {% for b in brands %}
       <option value="{{ b.pk }}">{{ b.name }}</option>
     {% endfor %}
@@ -123,16 +146,19 @@
       document.getElementById('manual-product-name').classList.add('is-invalid');
       return;
     }
+    const brandSelect = document.getElementById('manual-brand-select');
+    if (!brandSelect.value) {
+      brandSelect.classList.add('is-invalid');
+      return;
+    }
     // Directly populate the parent form's hidden fields
     document.getElementById('product-id-field').value = '';
     document.getElementById('upc-hidden').value = '{{ upc }}';
     document.getElementById('product-name-hidden').value = name;
     document.getElementById('category-id-hidden').value = document.getElementById('manual-category-select').value;
-    document.getElementById('brand-id-hidden').value = document.getElementById('manual-brand-select').value;
+    document.getElementById('brand-id-hidden').value = brandSelect.value;
     document.getElementById('description-hidden').value = '';
-    // Enable save button
-    document.getElementById('save-btn').disabled = false;
-    document.getElementById('no-product-warning').style.display = 'none';
+    checkSaveReady();
     // Visual feedback
     this.classList.replace('btn-outline-secondary', 'btn-success');
     this.innerHTML = '<i class="bi bi-check2 me-1"></i>Confirmed — ' + name;

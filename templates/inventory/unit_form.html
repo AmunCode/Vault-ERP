@@ -71,9 +71,14 @@
         <div class="card-header fw-semibold">Item Details</div>
         <div class="card-body">
           <div class="row g-3">
-            <div class="col-md-6">
+            <div class="col-md-3">
               <label class="form-label">Condition</label>
               {{ form.condition_grade }}
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Qty</label>
+              {{ form.qty }}
+              <div class="form-text" id="qty-note">Identical items (same size/color/condition/location) merge into one stock line</div>
             </div>
             <div class="col-md-3">
               <label class="form-label">Size</label>
@@ -86,6 +91,7 @@
             <div class="col-md-6">
               <label class="form-label">Serial Number (optional)</label>
               {{ form.serial_number }}
+              <div class="form-text">If set, this item is tracked individually and never merges with others (qty locked to 1)</div>
             </div>
             <div class="col-md-6">
               <label class="form-label">Warehouse Location</label>
@@ -117,7 +123,7 @@
         <a href="{% url 'inventory:lot_detail' lot.pk %}" class="btn btn-outline-secondary">Done</a>
       </div>
       <div class="form-text mt-2 text-warning" id="no-product-warning" style="display:none;">
-        Please identify the product above before saving.
+        Please identify the product and brand above before saving.
       </div>
     </form>
   </div>
@@ -133,8 +139,10 @@
   function checkSaveReady() {
     const hasProduct = productIdField.value ||
       document.getElementById('product-name-hidden').value;
-    saveBtn.disabled = !hasProduct;
-    noProductWarning.style.display = hasProduct ? 'none' : '';
+    const hasBrand = document.getElementById('brand-id-hidden').value;
+    const ready = hasProduct && hasBrand;
+    saveBtn.disabled = !ready;
+    noProductWarning.style.display = ready ? 'none' : '';
   }
 
   // Cost override toggle
@@ -153,6 +161,25 @@
     costField.classList.toggle('border-warning', overrideActive);
   });
   costField.readOnly = true;
+
+  // Serialized items are tracked individually -- lock qty to 1 while a
+  // serial number is entered, since they never pool with anything.
+  const qtyField = document.querySelector('[name=qty]');
+  const qtyNote = document.getElementById('qty-note');
+  const serialField = document.querySelector('[name=serial_number]');
+
+  function syncQtyLock() {
+    const hasSerial = serialField.value.trim() !== '';
+    qtyField.readOnly = hasSerial;
+    if (hasSerial) {
+      qtyField.value = 1;
+      qtyNote.textContent = 'Serialized item -- qty locked to 1';
+    } else {
+      qtyNote.textContent = 'Identical items (same size/color/condition/location) merge into one stock line';
+    }
+  }
+  serialField.addEventListener('input', syncQtyLock);
+  syncQtyLock();
 
   // Trim scan input to first 6 chars before HTMX fires
   document.getElementById('upc-input').addEventListener('keydown', (e) => {

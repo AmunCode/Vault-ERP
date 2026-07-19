@@ -31,11 +31,12 @@ class UnitProcessForm(forms.ModelForm):
     class Meta:
         model = InventoryUnit
         fields = [
-            'condition_grade', 'size', 'color', 'unit_cost', 'cost_overridden',
+            'condition_grade', 'size', 'color', 'qty', 'unit_cost', 'cost_overridden',
             'serial_number', 'warehouse_location', 'notes',
         ]
         widgets = {
             'notes': forms.Textarea(attrs={'rows': 2}),
+            'qty': forms.NumberInput(attrs={'min': 1}),
         }
 
     def __init__(self, *args, **kwargs):

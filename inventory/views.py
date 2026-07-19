@@ -1,12 +1,13 @@
 import re
 import requests
+from decimal import Decimal
 from django.contrib import messages
-from django.db.models import Count
+from django.db.models import Case, Count, IntegerField, Sum, When
 from django.shortcuts import render, get_object_or_404, redirect
 from catalog.models import Product, Category, Brand
 from core.models import SiteSettings
 from core.scrapers import scrape_hsn
-from .models import InventoryLot, InventoryUnit, WarehouseLocation
+from .models import InventoryLot, InventoryTransaction, InventoryUnit, WarehouseLocation
 from .forms import LotReceiveForm, UnitProcessForm
 
 
@@ -60,10 +61,55 @@ def unit_list(request):
     units = InventoryUnit.objects.select_related('product', 'source_lot', 'warehouse_location')
     status_filter = request.GET.get('status', 'available')
     units = units.filter(status=status_filter)
+
+    # Optional drill-down filters from the Inventory Levels page
+    product_id = request.GET.get('product_id')
+    size = request.GET.get('size', '')
+    color = request.GET.get('color', '')
+    if product_id:
+        units = units.filter(product_id=product_id, size=size, color=color)
+
     return render(request, 'inventory/unit_list.html', {
         'units': units,
         'status_filter': status_filter,
         'status_choices': InventoryUnit.STATUS_CHOICES,
+    })
+
+
+def inventory_levels(request):
+    """
+    'How many of this product/size/color do I have?' -- rolls qty up across
+    all conditions, locations, and cost-overridden rows into one number per
+    product+size+color. Drill-down happens via unit_list, which already
+    shows condition/location/cost per row.
+    """
+    q = request.GET.get('q', '')
+    show_all = request.GET.get('show_all') == '1'
+
+    rows = (
+        InventoryUnit.objects
+        .values('product_id', 'product__name', 'size', 'color')
+        .annotate(
+            available_qty=Sum(Case(
+                When(status='available', then='qty'),
+                default=0, output_field=IntegerField(),
+            )),
+            reserved_qty=Sum(Case(
+                When(status='reserved', then='qty'),
+                default=0, output_field=IntegerField(),
+            )),
+        )
+        .order_by('product__name', 'size', 'color')
+    )
+    if q:
+        rows = rows.filter(product__name__icontains=q)
+    if not show_all:
+        rows = rows.filter(available_qty__gt=0)
+
+    return render(request, 'inventory/level_list.html', {
+        'rows': rows,
+        'q': q,
+        'show_all': show_all,
     })
 
 
@@ -109,11 +155,22 @@ def unit_create(request, lot_pk):
             if hsn_item_number and not product.hsn_item_number:
                 product.hsn_item_number = hsn_item_number
                 update_fields.append('hsn_item_number')
+            # HSN scraping doesn't reliably provide brand data, so backfill it
+            # here too, not just at creation time -- brand is required below.
+            if brand_id and not product.brand:
+                brand = Brand.objects.filter(pk=brand_id).first()
+                if brand:
+                    product.brand = brand
+                    update_fields.append('brand')
             if update_fields:
                 product.save(update_fields=update_fields)
 
         if not product:
             messages.error(request, "Please identify the product before saving.")
+            return redirect('inventory:unit_create', lot_pk=lot.pk)
+
+        if not product.brand:
+            messages.error(request, "Please select a brand before saving — it's used in the item's SKU.")
             return redirect('inventory:unit_create', lot_pk=lot.pk)
 
         form = UnitProcessForm(request.POST)
@@ -124,8 +181,53 @@ def unit_create(request, lot_pk):
             # Default cost to lot's derived unit_cost unless overridden
             if not unit.cost_overridden:
                 unit.unit_cost = lot.unit_cost
-            unit.save()
-            messages.success(request, f"Item {unit.sku} added to lot {lot.sku}.")
+            incoming_qty = max(unit.qty or 1, 1)
+
+            if unit.serial_number:
+                # Serialized items are individually distinct -- never pool,
+                # always their own row, qty fixed at 1.
+                unit.qty = 1
+                unit.save()
+                target = unit
+            else:
+                # cost_overridden items never merge (in either direction) --
+                # that's what protects a standout piece's manual cost from
+                # being averaged away.
+                existing = None
+                if not unit.cost_overridden:
+                    existing = InventoryUnit.objects.filter(
+                        product=product,
+                        size=unit.size,
+                        color=unit.color,
+                        condition_grade=unit.condition_grade,
+                        warehouse_location=unit.warehouse_location,
+                        status='available',
+                        cost_overridden=False,
+                        serial_number='',
+                    ).first()
+
+                if existing:
+                    combined_qty = existing.qty + incoming_qty
+                    existing.unit_cost = (
+                        (existing.unit_cost * existing.qty) + (unit.unit_cost * incoming_qty)
+                    ) / combined_qty
+                    existing.qty = combined_qty
+                    existing.source_lot = lot
+                    existing.save()
+                    target = existing
+                else:
+                    unit.qty = incoming_qty
+                    unit.save()
+                    target = unit
+
+            InventoryTransaction.objects.create(
+                transaction_type='receive',
+                quantity_delta=incoming_qty,
+                product=product,
+                inventory_lot=lot,
+                inventory_unit=target,
+            )
+            messages.success(request, f"Added {incoming_qty} to {target.sku} (now qty {target.qty}) in lot {lot.sku}.")
             # Stay on the same page for rapid multi-item entry
             return redirect('inventory:unit_create', lot_pk=lot.pk)
     else:
@@ -172,6 +274,7 @@ def upc_lookup(request):
         return render(request, 'inventory/partials/upc_result.html', {
             'product': product,
             'source': 'catalog',
+            'brands': brands,
         })
 
     # 2. HSN scrape (primary external source)

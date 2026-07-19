@@ -86,6 +86,11 @@
         </a>
       </li>
       <li class="nav-item">
+        <a class="nav-link {% block nav_levels %}{% endblock %}" href="{% url 'inventory:inventory_levels' %}">
+          <i class="bi bi-bar-chart-steps me-2"></i>Inventory Levels
+        </a>
+      </li>
+      <li class="nav-item">
         <a class="nav-link {% block nav_locations %}{% endblock %}" href="{% url 'inventory:location_list' %}">
           <i class="bi bi-geo-alt me-2"></i>Locations
         </a>

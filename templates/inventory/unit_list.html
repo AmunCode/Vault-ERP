@@ -23,7 +23,10 @@
         <tr>
           <th>SKU</th>
           <th>Product</th>
+          <th>Size</th>
+          <th>Color</th>
           <th>Condition</th>
+          <th class="text-end">Qty</th>
           <th>Source Lot</th>
           <th class="text-end">Cost</th>
           <th>Location</th>
@@ -35,7 +38,10 @@
         <tr>
           <td class="font-monospace fw-semibold">{{ unit.sku }}</td>
           <td>{{ unit.product.name }}</td>
+          <td>{{ unit.size|default:"—" }}</td>
+          <td>{{ unit.color|default:"—" }}</td>
           <td>{{ unit.get_condition_grade_display }}</td>
+          <td class="text-end">{{ unit.qty }}</td>
           <td>
             {% if unit.source_lot %}
               <a href="{% url 'inventory:lot_detail' unit.source_lot.pk %}" class="text-decoration-none">{{ unit.source_lot.sku }}</a>
@@ -50,7 +56,7 @@
         </tr>
         {% empty %}
         <tr>
-          <td colspan="7" class="text-center text-muted py-4">No units found.</td>
+          <td colspan="10" class="text-center text-muted py-4">No units found.</td>
         </tr>
         {% endfor %}
       </tbody>

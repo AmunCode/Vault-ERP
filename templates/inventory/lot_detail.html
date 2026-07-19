@@ -83,6 +83,7 @@
           <th>SKU</th>
           <th>Product</th>
           <th>Condition</th>
+          <th class="text-end">Qty</th>
           <th>Status</th>
           <th class="text-end">Cost</th>
           <th>Location</th>
@@ -95,6 +96,7 @@
           <td class="fw-semibold font-monospace">{{ unit.sku }}</td>
           <td>{{ unit.product.name }}</td>
           <td>{{ unit.get_condition_grade_display }}</td>
+          <td class="text-end">{{ unit.qty }}</td>
           <td>
             {% if unit.status == 'available' %}
               <span class="badge bg-success">Available</span>
@@ -115,7 +117,7 @@
         </tr>
         {% empty %}
         <tr>
-          <td colspan="7" class="text-center text-muted py-4">
+          <td colspan="8" class="text-center text-muted py-4">
             No items processed yet.
             <a href="{% url 'inventory:unit_create' lot.pk %}">Add the first item.</a>
           </td>

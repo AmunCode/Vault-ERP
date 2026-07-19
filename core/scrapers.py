@@ -66,6 +66,7 @@ def scrape_hsn(item_number: str) -> dict | None:
     scrape runs at a time via a module-level lock.
     """
     item_number = item_number.strip()
+    print(f"[scrape_hsn] looking up item number: {item_number}")
     with _driver_lock:
         try:
             driver = _get_driver()
@@ -77,70 +78,70 @@ def scrape_hsn(item_number: str) -> dict | None:
             return None
 
 
+def _dismiss_popups(driver: webdriver.Chrome) -> None:
+    """
+    Remove marketing overlays (e.g. the Attentive SMS-signup iframe) that HSN
+    shows a couple seconds after load. These render full-viewport and steal
+    focus, which silently swallows send_keys() into the search box -- no
+    exception is raised, the input just never receives the typed text.
+    """
+    driver.execute_script("""
+        document.querySelectorAll(
+            '#attentive_creative, [id^="attentive"], iframe[title*="Sign Up" i]'
+        ).forEach(el => el.remove());
+    """)
+
+
 def _scrape(driver: webdriver.Chrome, item_number: str) -> dict | None:
     wait = WebDriverWait(driver, 15)
 
     # Navigate to HSN and use the search box
     driver.get("https://www.hsn.com")
     time.sleep(2)
+    _dismiss_popups(driver)
 
     # Find and fill the search input
     try:
         search_box = wait.until(EC.presence_of_element_located((
             By.CSS_SELECTOR, 'input[type="search"], input[name="query"], input[placeholder*="Search"], #search-input'
         )))
+        search_box.click()
         search_box.clear()
         search_box.send_keys(item_number)
         search_box.submit()
     except TimeoutException:
         return None
 
-    # Wait for search results to render
-    try:
-        wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, 'a[href*="/products/"]')))
-    except TimeoutException:
-        return None
-
-    time.sleep(1)
-
-    # Click the first product result
-    links = driver.find_elements(By.CSS_SELECTOR, 'a[href*="/products/"]')
-    product_links = [
-        l for l in links
-        if l.get_attribute('href') and '/products/' in l.get_attribute('href')
-        and l.get_attribute('href') not in ('#', driver.current_url)
-    ]
-    if not product_links:
-        return None
-
-    product_url = product_links[0].get_attribute('href')
-    driver.get(product_url)
-
+    # An exact item-number search lands directly on the product page --
+    # no results-list page to click through.
     try:
         wait.until(EC.presence_of_element_located((By.TAG_NAME, 'h1')))
     except TimeoutException:
         pass
     time.sleep(1)
 
+    product_url = driver.current_url
     result = _extract_from_driver(driver, product_url)
-    if result and not _validate_match(result, item_number, product_url):
+    if result and not _validate_match(result, item_number):
         return None
     return result
 
 
-def _validate_match(result: dict, searched_code: str, product_url: str) -> bool:
+def _validate_match(result: dict, searched_code: str) -> bool:
     """
     Confirm the scraped product actually corresponds to the code that was searched.
 
-    HSN search returns the first result even when the code doesn't exist, so we
-    verify by checking the item number in the URL, JSON-LD sku, or model number.
+    HSN tags every image asset for a product with its item number (e.g.
+    ".../nina-leonard-crop-pant...~924538_7YJ.jpg"), which is a far more
+    reliable signal than the URL path -- the trailing URL segment is an
+    unrelated internal catalog id, not the item number, despite what it looks
+    like -- or JSON-LD sku/mpn, which are only populated when a product page
+    has JSON-LD at all (the DOM-scrape fallback never sets those fields).
     """
-    # 7-digit item numbers appear as the trailing segment of HSN product URLs
-    url_tail = product_url.rstrip('/').split('/')[-1]
-    if url_tail == searched_code:
-        return True
+    for image_url in result.get('images', []):
+        if searched_code in image_url:
+            return True
 
-    # JSON-LD sku (HSN item number) or mpn (model/style number)
     for field in ('sku', 'mpn', 'model'):
         val = result.get(field, '')
         if val and searched_code in val:

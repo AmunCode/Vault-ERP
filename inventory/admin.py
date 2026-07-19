@@ -25,7 +25,7 @@ class InventoryLotAdmin(admin.ModelAdmin):
 
 @admin.register(InventoryUnit)
 class InventoryUnitAdmin(admin.ModelAdmin):
-    list_display = ('sku', 'product', 'condition_grade', 'status')
+    list_display = ('sku', 'product', 'condition_grade', 'qty', 'status')
     search_fields = ('serial_number', 'sku')
     list_filter = ('status',)
 

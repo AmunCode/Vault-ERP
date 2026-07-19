@@ -1,5 +1,6 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_not_required
+from django.db.models import Sum
 from django.http import HttpResponse
 from django.shortcuts import render, redirect
 from django.utils import timezone
@@ -21,7 +22,7 @@ def dashboard(request):
     gross_today = sum(s.gross_amount for s in today_sales)
     net_today = sum(s.net_amount_received for s in today_sales)
 
-    units_available = InventoryUnit.objects.filter(status='available').count()
+    units_available = InventoryUnit.objects.filter(status='available').aggregate(total=Sum('qty'))['total'] or 0
     lots_pending = InventoryLot.objects.filter(status='pending_processing').count()
     total_lots = InventoryLot.objects.count()
 

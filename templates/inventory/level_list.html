@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}Inventory Levels — Vault ERP{% endblock %}
+{% block nav_levels %}active{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h4 class="mb-0 fw-bold">Inventory Levels</h4>
+</div>
+
+<form method="get" class="d-flex flex-wrap align-items-center gap-3 mb-3">
+  <div class="input-group" style="max-width:400px;">
+    <input type="text" name="q" class="form-control" placeholder="Search products..." value="{{ q }}">
+    <button class="btn btn-outline-secondary" type="submit"><i class="bi bi-search"></i></button>
+  </div>
+  <div class="form-check">
+    <input type="checkbox" class="form-check-input" id="show-all" name="show_all" value="1"
+           {% if show_all %}checked{% endif %} onchange="this.form.submit()">
+    <label class="form-check-label" for="show-all">Show sold-out variants</label>
+  </div>
+</form>
+
+<div class="card shadow-sm">
+  <div class="table-responsive">
+    <table class="table table-hover mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>Product</th>
+          <th>Size</th>
+          <th>Color</th>
+          <th class="text-end">Available</th>
+          <th class="text-end">Reserved</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in rows %}
+        <tr>
+          <td class="fw-semibold">{{ row.product__name }}</td>
+          <td>{{ row.size|default:"—" }}</td>
+          <td>{{ row.color|default:"—" }}</td>
+          <td class="text-end">
+            <a href="{% url 'inventory:unit_list' %}?product_id={{ row.product_id }}&size={{ row.size|urlencode }}&color={{ row.color|urlencode }}&status=available"
+               class="fw-semibold text-decoration-none">{{ row.available_qty }}</a>
+          </td>
+          <td class="text-end text-muted">{{ row.reserved_qty }}</td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="5" class="text-center text-muted py-4">No inventory levels to show.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
