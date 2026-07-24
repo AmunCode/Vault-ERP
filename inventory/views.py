@@ -130,6 +130,7 @@ def unit_create(request, lot_pk):
         category_id = request.POST.get('category_id')
         brand_id = request.POST.get('brand_id')
         description = request.POST.get('description', '')
+        images = [u for u in request.POST.get('images', '').split('|') if u]
 
         # Resolve or create product
         if not product and hsn_item_number:
@@ -146,6 +147,7 @@ def unit_create(request, lot_pk):
                 category=category,
                 brand=brand,
                 description=description,
+                images=images,
             )
         elif product:
             update_fields = []
@@ -162,6 +164,9 @@ def unit_create(request, lot_pk):
                 if brand:
                     product.brand = brand
                     update_fields.append('brand')
+            if images and not product.images:
+                product.images = images
+                update_fields.append('images')
             if update_fields:
                 product.save(update_fields=update_fields)
 

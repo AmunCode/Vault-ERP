@@ -50,6 +50,9 @@ class Product(models.Model):
     upc = models.CharField(max_length=12, blank=True)
     hsn_item_number = models.CharField(max_length=10, blank=True, db_index=True)
     mpn = models.CharField(max_length=255, blank=True)
+    # Linked CDN URLs (e.g. HSN's), not locally hosted -- proper media storage
+    # (download + Django media, per media_manager) is a later Phase 2 concern.
+    images = models.JSONField(default=list, blank=True)
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

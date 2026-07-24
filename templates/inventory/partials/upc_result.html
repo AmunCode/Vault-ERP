@@ -10,6 +10,9 @@
   <i class="bi bi-check-circle me-1"></i><strong>Found in catalog</strong>
 </div>
 <div class="border rounded p-3 mb-2 bg-light">
+  {% if product.images %}
+    <img src="{{ product.images.0 }}" class="img-thumbnail float-end ms-2" style="max-width:80px;max-height:80px;" alt="">
+  {% endif %}
   <div class="fw-semibold">{{ product.name }}</div>
   {% if product.brand %}<div class="text-muted small">{{ product.brand }}</div>{% endif %}
   {% if product.category %}<div class="text-muted small">{{ product.category }}</div>{% endif %}
@@ -97,6 +100,7 @@
         data-hsn-item-number="{% if source == 'hsn' %}{{ upc }}{% endif %}"
         data-name="{{ api_data.title }}"
         data-description="{{ api_data.description }}"
+        data-images="{{ api_data.images|join:'|' }}"
         id="api-confirm-btn">
   <i class="bi bi-plus-circle me-1"></i>Create &amp; Use This Product
 </button>

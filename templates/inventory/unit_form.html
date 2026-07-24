@@ -66,6 +66,7 @@
       <input type="hidden" name="category_id" id="category-id-hidden" value="">
       <input type="hidden" name="brand_id" id="brand-id-hidden" value="">
       <input type="hidden" name="description" id="description-hidden" value="">
+      <input type="hidden" name="images" id="images-hidden" value="">
 
       <div class="card shadow-sm mb-3">
         <div class="card-header fw-semibold">Item Details</div>
@@ -210,6 +211,7 @@
         document.getElementById('category-id-hidden').value = btn.dataset.categoryId || '';
         document.getElementById('brand-id-hidden').value = btn.dataset.brandId || '';
         document.getElementById('description-hidden').value = btn.dataset.description || '';
+        document.getElementById('images-hidden').value = btn.dataset.images || '';
         btn.classList.replace('btn-outline-success', 'btn-success');
         btn.innerHTML = '<i class="bi bi-check2 me-1"></i>Selected';
         checkSaveReady();
