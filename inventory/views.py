@@ -76,6 +76,21 @@ def unit_list(request):
     })
 
 
+def unit_detail(request, pk):
+    unit = get_object_or_404(
+        InventoryUnit.objects.select_related(
+            'product', 'product__brand', 'product__category',
+            'source_lot', 'warehouse_location',
+        ),
+        pk=pk,
+    )
+    transactions = unit.transactions.order_by('-created_at')
+    return render(request, 'inventory/unit_detail.html', {
+        'unit': unit,
+        'transactions': transactions,
+    })
+
+
 def inventory_levels(request):
     """
     'How many of this product/size/color do I have?' -- rolls qty up across

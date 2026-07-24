@@ -36,7 +36,9 @@
       <tbody>
         {% for unit in units %}
         <tr>
-          <td class="font-monospace fw-semibold">{{ unit.sku }}</td>
+          <td class="font-monospace fw-semibold">
+            <a href="{% url 'inventory:unit_detail' unit.pk %}" class="text-decoration-none">{{ unit.sku }}</a>
+          </td>
           <td>{{ unit.product.name }}</td>
           <td>{{ unit.size|default:"—" }}</td>
           <td>{{ unit.color|default:"—" }}</td>

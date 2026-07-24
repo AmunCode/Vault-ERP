@@ -1,0 +1,173 @@
+{% extends "base.html" %}
+{% block title %}{{ unit.sku }} — Vault ERP{% endblock %}
+{% block nav_units %}active{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center gap-3 mb-4">
+  <a href="{% url 'inventory:unit_list' %}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left"></i>
+  </a>
+  <div>
+    <h4 class="mb-0 fw-bold font-monospace">{{ unit.sku }}</h4>
+    <span class="text-muted small">{{ unit.product.name }}</span>
+  </div>
+  <div class="ms-auto">
+    {% if unit.status == 'available' %}
+      <span class="badge bg-success">Available</span>
+    {% elif unit.status == 'sold' %}
+      <span class="badge bg-primary">Sold</span>
+    {% else %}
+      <span class="badge bg-secondary">{{ unit.get_status_display }}</span>
+    {% endif %}
+  </div>
+</div>
+
+<div class="row g-4">
+  <!-- Left: images + product info -->
+  <div class="col-12 col-lg-5">
+    {% if unit.product.images %}
+    <div class="card shadow-sm mb-3">
+      <div class="card-body">
+        <div class="row g-2">
+          {% for img in unit.product.images %}
+          <div class="col-4">
+            <img src="{{ img }}" class="img-thumbnail w-100" style="aspect-ratio:1;object-fit:cover;" alt="">
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    <div class="card shadow-sm mb-3">
+      <div class="card-header fw-semibold">Product</div>
+      <div class="card-body">
+        <div class="mb-2">
+          <div class="text-muted small">Name</div>
+          <div>{{ unit.product.name }}</div>
+        </div>
+        <div class="row g-2 mb-2">
+          <div class="col-6">
+            <div class="text-muted small">Brand</div>
+            <div>{{ unit.product.brand|default:"—" }}</div>
+          </div>
+          <div class="col-6">
+            <div class="text-muted small">Category</div>
+            <div>{{ unit.product.category|default:"—" }}</div>
+          </div>
+        </div>
+        <div class="row g-2 mb-2">
+          <div class="col-6">
+            <div class="text-muted small">HSN Item #</div>
+            <div class="font-monospace">{{ unit.product.hsn_item_number|default:"—" }}</div>
+          </div>
+          <div class="col-6">
+            <div class="text-muted small">UPC</div>
+            <div class="font-monospace">{{ unit.product.upc|default:"—" }}</div>
+          </div>
+        </div>
+        {% if unit.product.description %}
+        <div>
+          <div class="text-muted small">Description</div>
+          <div class="small">{{ unit.product.description }}</div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Right: item details + transaction history -->
+  <div class="col-12 col-lg-7">
+    <div class="card shadow-sm mb-3">
+      <div class="card-header fw-semibold">Item Details</div>
+      <div class="card-body">
+        <div class="row g-3 mb-2">
+          <div class="col-md-4">
+            <div class="text-muted small">Size</div>
+            <div>{{ unit.size|default:"—" }}</div>
+          </div>
+          <div class="col-md-4">
+            <div class="text-muted small">Color</div>
+            <div>{{ unit.color|default:"—" }}</div>
+          </div>
+          <div class="col-md-4">
+            <div class="text-muted small">Condition</div>
+            <div>{{ unit.get_condition_grade_display }}</div>
+          </div>
+        </div>
+        <div class="row g-3 mb-2">
+          <div class="col-md-4">
+            <div class="text-muted small">Qty</div>
+            <div>{{ unit.qty }}</div>
+          </div>
+          <div class="col-md-4">
+            <div class="text-muted small">Unit Cost</div>
+            <div>
+              ${{ unit.unit_cost|floatformat:2 }}
+              {% if unit.cost_overridden %}<i class="bi bi-pencil-fill text-warning ms-1" title="Cost overridden"></i>{% endif %}
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="text-muted small">Location</div>
+            <div>{{ unit.warehouse_location|default:"—" }}</div>
+          </div>
+        </div>
+        <div class="row g-3 mb-2">
+          <div class="col-md-4">
+            <div class="text-muted small">Serial Number</div>
+            <div class="font-monospace">{{ unit.serial_number|default:"—" }}</div>
+          </div>
+          <div class="col-md-4">
+            <div class="text-muted small">Source Lot</div>
+            <div>
+              {% if unit.source_lot %}
+                <a href="{% url 'inventory:lot_detail' unit.source_lot.pk %}" class="text-decoration-none">{{ unit.source_lot.sku }}</a>
+              {% else %}—{% endif %}
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="text-muted small">Added</div>
+            <div>{{ unit.created_at|date:"M d, Y" }}</div>
+          </div>
+        </div>
+        {% if unit.notes %}
+        <div>
+          <div class="text-muted small">Notes</div>
+          <div class="small">{{ unit.notes }}</div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="card shadow-sm">
+      <div class="card-header fw-semibold">Transaction History</div>
+      <div class="table-responsive">
+        <table class="table table-hover mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>Date</th>
+              <th>Type</th>
+              <th class="text-end">Qty Δ</th>
+              <th>Notes</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for tx in transactions %}
+            <tr>
+              <td class="text-muted small">{{ tx.created_at|date:"M d, Y H:i" }}</td>
+              <td>{{ tx.get_transaction_type_display }}</td>
+              <td class="text-end">{{ tx.quantity_delta }}</td>
+              <td class="small text-muted">{{ tx.notes|default:"—" }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="4" class="text-center text-muted py-4">No transactions recorded.</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

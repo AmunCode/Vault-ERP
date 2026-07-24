@@ -93,7 +93,9 @@
       <tbody>
         {% for unit in units %}
         <tr>
-          <td class="fw-semibold font-monospace">{{ unit.sku }}</td>
+          <td class="fw-semibold font-monospace">
+            <a href="{% url 'inventory:unit_detail' unit.pk %}" class="text-decoration-none">{{ unit.sku }}</a>
+          </td>
           <td>{{ unit.product.name }}</td>
           <td>{{ unit.get_condition_grade_display }}</td>
           <td class="text-end">{{ unit.qty }}</td>
