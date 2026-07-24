@@ -9,6 +9,7 @@ import re
 import json
 import time
 import threading
+from urllib.parse import quote
 
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
@@ -21,6 +22,12 @@ from webdriver_manager.chrome import ChromeDriverManager
 
 _IMAGE_PREFER = re.compile(r'/prodfull/|/rocs1200/|/pd154/')
 _IMAGE_EXCLUDE = re.compile(r'match|/orig/|~\d+x\d+')
+
+# HSN posts short per-item demo clips to YouTube alongside hour-long live-
+# broadcast recordings that also match a plain item-number search. Duration
+# is the only reliable way to tell them apart -- both kinds of video title
+# look like generic "HSN | ..." text.
+_YOUTUBE_MAX_DURATION_SECONDS = 15 * 60
 
 # Module-level singleton — one browser per Django process
 _driver: webdriver.Chrome | None = None
@@ -70,12 +77,75 @@ def scrape_hsn(item_number: str) -> dict | None:
     with _driver_lock:
         try:
             driver = _get_driver()
-            return _scrape(driver, item_number)
+            result = _scrape(driver, item_number)
+            if result:
+                return result
+            print(f"[scrape_hsn] not on hsn.com, trying YouTube fallback")
+            return _scrape_youtube_title(driver, item_number)
         except WebDriverException:
             # Browser may have crashed; clear singleton so next call restarts it
             global _driver
             _driver = None
             return None
+
+
+def _parse_duration_seconds(aria_label: str) -> int | None:
+    """
+    YouTube's video-title aria-label ends with the duration, e.g.
+    "...Blouse 4 minutes, 54 seconds" or "...At Home 01.26.16 1 hour".
+    Anchor to the trailing phrase so a number embedded earlier in the
+    title itself (e.g. "5 Minute Beauty Routine") isn't misread as the
+    duration.
+    """
+    trailing = re.search(r'((?:\d+\s*(?:hour|minute|second)s?[,\s]*)+)$', aria_label, re.IGNORECASE)
+    if not trailing:
+        return None
+    unit_seconds = {'hour': 3600, 'minute': 60, 'second': 1}
+    total = 0
+    for value, unit in re.findall(r'(\d+)\s*(hour|minute|second)s?', trailing.group(1), re.IGNORECASE):
+        total += int(value) * unit_seconds[unit.lower()]
+    return total
+
+
+def _scrape_youtube_title(driver: webdriver.Chrome, item_number: str) -> dict | None:
+    """
+    Fallback when HSN's own site doesn't have the product page. Searches
+    YouTube for "HSN <item_number>" and returns the title of the first
+    *short* result (a per-item demo clip), skipping hour-long live-broadcast
+    recordings that also match the search. This is a best-effort title only
+    -- no images/brand/price -- and isn't cross-checked against the item
+    number the way the HSN scrape's _validate_match is, so the worker still
+    needs to review it before confirming.
+    """
+    query = f"HSN {item_number}"
+    driver.get(f"https://www.youtube.com/results?search_query={quote(query)}")
+    wait = WebDriverWait(driver, 15)
+    try:
+        wait.until(EC.presence_of_element_located((By.ID, "video-title")))
+    except TimeoutException:
+        return None
+    time.sleep(1)
+
+    for el in driver.find_elements(By.ID, "video-title")[:10]:
+        aria_label = el.get_attribute('aria-label') or ''
+        duration = _parse_duration_seconds(aria_label)
+        if duration is None or duration > _YOUTUBE_MAX_DURATION_SECONDS:
+            continue
+        title = el.text.strip()
+        if not title:
+            continue
+        title = re.sub(r'\s*\|\s*HSN\s*$', '', title).strip()
+        return {
+            'title': title,
+            'description': '',
+            'brand': '',
+            'images': [],
+            'retail_price': '',
+            'url': el.get_attribute('href') or '',
+            'needs_title': False,
+            'from_youtube': True,
+        }
+    return None
 
 
 def _dismiss_popups(driver: webdriver.Chrome) -> None:

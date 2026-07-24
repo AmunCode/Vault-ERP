@@ -305,7 +305,7 @@ def upc_lookup(request):
         return render(request, 'inventory/partials/upc_result.html', {
             'api_data': hsn_data,
             'upc': code,
-            'source': 'hsn',
+            'source': 'youtube' if hsn_data.get('from_youtube') else 'hsn',
             'categories': categories,
             'brands': brands,
         })
