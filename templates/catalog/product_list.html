@@ -36,7 +36,9 @@
               <img src="{{ product.images.0 }}" class="img-thumbnail" style="width:40px;height:40px;object-fit:cover;" alt="">
             {% endif %}
           </td>
-          <td class="fw-semibold">{{ product.name }}</td>
+          <td class="fw-semibold">
+            <a href="{% url 'catalog:product_detail' product.pk %}" class="text-decoration-none">{{ product.name }}</a>
+          </td>
           <td>{{ product.brand|default:"—" }}</td>
           <td>{{ product.category|default:"—" }}</td>
           <td class="font-monospace small">{{ product.hsn_item_number|default:"—" }}</td>
